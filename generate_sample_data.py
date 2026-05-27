@@ -75,7 +75,7 @@ MESSAGE_TEMPLATES = {
 CATEGORIES = list(MESSAGE_TEMPLATES.keys())
 
 
-def generate_message_and_days(product_name: str) -> tuple[str, int]:
+def generate_message_and_days(product_name: str) -> tuple[str, int, str]:
     category = random.choice(CATEGORIES)
     template, day_range = random.choice(MESSAGE_TEMPLATES[category])
     days = random.randint(day_range[0], day_range[1])
@@ -83,7 +83,7 @@ def generate_message_and_days(product_name: str) -> tuple[str, int]:
     # Some delivery_issues templates embed {days} — only those need a >0 stand-in
     days_display = max(days, 5) if "{days}" in template else days
     message = template.format(product=product_name, days=days_display)
-    return message, days
+    return message, days, category
 
 
 def generate_tickets(n: int = 200) -> list[dict]:
@@ -94,7 +94,7 @@ def generate_tickets(n: int = 200) -> list[dict]:
     for i in range(n):
         product_name = random.choice(PRODUCT_NAMES)
         product_category = PRODUCTS[product_name]
-        message, days_since_delivery = generate_message_and_days(product_name)
+        message, days_since_delivery, category = generate_message_and_days(product_name)
 
         created_at = fake.date_time_between(start_date=sixty_days_ago, end_date=now)
 
@@ -109,6 +109,7 @@ def generate_tickets(n: int = 200) -> list[dict]:
             "channel":              random.choice(CHANNELS),
             "days_since_delivery":  days_since_delivery,
             "customer_message":     message,
+            "true_category":       category,  
         })
 
     return tickets
@@ -121,7 +122,7 @@ def main():
     fieldnames = [
         "ticket_id", "created_at", "customer_name", "customer_email",
         "order_id", "product_name", "product_category", "channel",
-        "days_since_delivery", "customer_message",
+        "days_since_delivery", "customer_message", "true_category"
     ]
 
     with open(output_path, "w", newline="", encoding="utf-8") as f:
