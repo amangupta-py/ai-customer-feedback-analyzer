@@ -18,12 +18,12 @@ REQUIRED_COLUMNS = [
 ]
 
 
-def load_tickets(filepath: str) -> pd.DataFrame:
+def load_tickets() -> pd.DataFrame:
     if not DATA_FILE.exists():
-        raise FileNotFoundError(f"Data file not found: {filepath}\n"
+        raise FileNotFoundError(f"Data file not found\n"
                                 "please run generate_sample_data.py to create it.")
     
-    df = pd.read_csv(filepath, encoding="utf-8", parse_dates=["created_at"])
+    df = pd.read_csv(DATA_FILE, encoding="utf-8", parse_dates=["created_at"])
     missing = [col for col in REQUIRED_COLUMNS if col not in df.columns]
     if missing:
         raise ValueError(f"Missing required columns: {missing}")
@@ -38,7 +38,7 @@ def get_tickets_for_classification(df: pd.DataFrame) -> list:
     return tickets
 
 if __name__ == "__main__":
-    df = load_tickets("tickets.csv")
+    df = load_tickets()
     tickets = get_tickets_for_classification(df)
     print(f"Loaded {len(df)} tickets")
     print(tickets[:2])
