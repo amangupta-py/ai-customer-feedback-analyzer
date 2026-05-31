@@ -6,7 +6,6 @@ Sends tickets in batches, returns structured classifications with reasoning.
 import os
 import json
 import time
-from time import time
 from dotenv import load_dotenv
 import google.generativeai as genai
 from pathlib import Path
@@ -14,7 +13,7 @@ from pathlib import Path
 load_dotenv()
 
 # === Configuration ===
-MODEL_NAME = "gemini-2.0-flash"
+MODEL_NAME = "gemini-2.5-flash"
 API_KEY = os.getenv("GEMINI_API_KEY")
 BATCH_SIZE = 20  # Tickets per API call
 # === Output path ===
@@ -217,27 +216,31 @@ def classify_batch(batch: list[dict]) -> list[dict]:
     return classifications
 
 def classify_all_tickets(tickets: list[dict]) -> list[dict]:
-    """
-    Classify all tickets by processing them in batches.
+    """Classify only unclassified tickets, merge with existing classifications."""
+    existing = load_existing_classifications()
+    existing_ids = {c["ticket_id"] for c in existing}
 
-    Args:
-        tickets: Full list of ticket dicts to classify.
+    pending = [t for t in tickets if t["ticket_id"] not in existing_ids]
 
-    Returns:
-        Flat list of all classifications across all batches.
-    """
-    batches = batch_tickets(tickets)
-    all_classifications = []
+    if not pending:
+        print(f"✓ All {len(tickets)} tickets already classified. Nothing to do.")
+        return existing
 
-    print(f"Classifying {len(tickets)} tickets across {len(batches)} batches...")
+    print(f"Already classified: {len(existing)}")
+    print(f"Pending: {len(pending)}")
+    print(f"Classifying in batches of {BATCH_SIZE}...")
+
+    batches = batch_tickets(pending)
+    new_classifications = list(existing)  # Start with existing
 
     for i, batch in enumerate(batches, start=1):
         print(f"  Batch {i}/{len(batches)} ({len(batch)} tickets)...", end=" ")
+
         success = False
         for attempt in range(2):
             try:
                 classifications = classify_batch(batch)
-                all_classifications.extend(classifications)
+                new_classifications.extend(classifications)
                 print(f"✓ {len(classifications)} classified")
                 success = True
                 break
@@ -249,16 +252,31 @@ def classify_all_tickets(tickets: list[dict]) -> list[dict]:
 
         if not success:
             continue
-        
-        # Throttle: respect free tier rate limit (20 req/min)
+
         if i < len(batches):
             time.sleep(4)
 
+    return new_classifications
 
-    return all_classifications
+def load_existing_classifications() -> list[dict]:
+    """Load classifications already saved from previous runs."""
+    if not OUTPUT_FILE.exists():
+        return []
+    try:
+        with open(OUTPUT_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, list) and all(isinstance(item, dict) for item in data):
+                return data
+    except (json.JSONDecodeError, OSError):
+        pass
+    return []
 
 def save_classifications(classifications: list[dict]) -> None:
-    """Save classifications to JSON file in project root."""
+    """Save classifications to JSON file. Refuses to overwrite with empty data."""
+    if not classifications:
+        print("\n⚠️  No new classifications to save. Existing file preserved.")
+        return
+
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(classifications, f, indent=2, ensure_ascii=False)
     print(f"\n✓ Saved {len(classifications)} classifications to {OUTPUT_FILE.name}")
