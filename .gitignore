@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project Files
+aggregations.json
+CLAUDE.md
+.claude
+classifications.json
+dashboard.html

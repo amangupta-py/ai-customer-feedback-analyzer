@@ -71,7 +71,7 @@ def get_urgent_tickets(merged: pd.DataFrame) -> list[dict]:
     return [
         {
             "ticket_id": row["ticket_id"],
-            "created_at": row["created_at"].strftime("%Y-%m-%d %H:%M"),
+            "created_at": pd.to_datetime(row["created_at"]).strftime("%Y-%m-%d %H:%M"),
             # "created_at": row["created_at"].strftime("%Y-%m-%d"),
             "customer_name": row["customer_name"],
             "customer_email": row["customer_email"],
